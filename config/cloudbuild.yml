@@ -21,5 +21,18 @@ steps:
     args:
       - push
       - gcr.io/$PROJECT_ID/kurasawatest:$_TAG_NAME
+  # CloudRunへdeploy
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - kurasawatest
+      - --image
+      - gcr.io/$PROJECT_ID/kurasawatest:$_TAG_NAME
+      - --region
+      - asia-northeast1
+      - --platform
+      - managed
 options:
   substitutionOption: MUST_MATCH
