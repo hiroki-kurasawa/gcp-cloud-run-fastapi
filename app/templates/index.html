@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="jp">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.3.0/font/bootstrap-icons.css">
+    <title>AdsSimulator</title>
+</head>
+<body>
+<div class="container container-fluid">
+
+    <div class="row">
+        <div class="col-md-12">
+            <nav class="navbar navbar-light bg-light">
+                <span class="navbar-brand mb-0 h1">リーチシミュレーション</span>
+            </nav>
+            <p>選択した媒体のリーチカーブを描画、入力された予算に対する推定のリーチ人数をシミュレーションします</p>
+            <!--      入力フォーム      -->
+            <form action="/simulation/submit" method="post" id="form-simulation" class="mt-3" data-toggle="validator" role="form">
+                <div class="form-row">
+                    <div class="form-group col-md-3">
+                        <input type="text" class="form-control" name="budget" placeholder="予算(円)" pattern="[0-9]*" data-pattern-error="半角数字を入力してください" required >
+                        <div class="help-block with-errors text-danger"></div>
+                    </div>
+                     <div class="form-group col-md-3">
+                        <select class="form-control" name="delivery" >
+                            <option selected>復帰</option>
+                        </select>
+                    </div>
+                    <div class="form-group col-md-3">
+                        <select class="form-control" name="media" >
+                            <option selected>Twitter</option>
+                            <option>Youtube</option>
+                        </select>
+                    </div>
+                    <div class="form-group col-md-3">
+                        <button type="submit" class="btn btn-primary" id="btn-simulation">実行</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div id="sample" class="col-md-12" style="margin: 20px">
+            <p class="h2">広告予算0円を消化すると0人にリーチできると推測されます</p>
+        </div>
+        <div class="col-md-12">
+            <!--      グラフの作成      -->
+            <div id="test"></div>
+        </div>
+
+        <!--    予算アロケーション    -->
+        <div class="col-md-12">
+            <nav class="navbar navbar-light bg-light">
+                <span class="navbar-brand mb-0 h1">予算アロケーション</span>
+            </nav>
+            <p>入力した予算を選択した媒体へ最適なアロケーションを実行します</p>
+            <form action="/optimization/submit" method="post" id="form-optimization" class="mt-3" data-toggle="validator" role="form">
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        <input type="text" class="form-control" name="budget" placeholder="予算(円)" pattern="[0-9]*" data-pattern-error="半角数字を入力してください" required>
+                        <div class="help-block with-errors text-danger"></div>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <select class="form-control" name="delivery" >
+                            <option selected>復帰</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group col-md-6" id="media-checkbox">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" name="twitter">
+                        <label class="form-check-label">Twitter</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" name="youtube">
+                        <label class="form-check-label">Youtube</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" name="facebook">
+                        <label class="form-check-label">Facebook</label>
+                    </div>
+                </div>
+                <div class="form-group col-md-6">
+                    <button type="submit" class="mt-1 btn btn-primary" id="btn-optimization" disabled>実行</button>
+                </div>
+            </form>
+            <div id="server-response">
+                <p id="error-message" style="color: red"></p>
+            </div>
+        </div>
+
+        <div class="col-md-12">
+            <!--     グラフの作成       -->
+            <div id="waterfall"></div>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/1000hz-bootstrap-validator/0.11.9/validator.min.js" integrity="sha256-dHf/YjH1A4tewEsKUSmNnV05DDbfGN3g7NMq86xgGh8=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.serializeJSON/3.1.1/jquery.serializejson.min.js" integrity="sha512-czywXrb/msTMh+lhgSe/vQ0GT0OraNiD8Knd7A7fMqEjDmQxljn/b39skl45eu+iyG0wxC9SuqcaUatZ4S0kdA==" crossorigin="anonymous"></script>
+<script>
+	let data = [{
+	    name: "sample1",
+	    x: [1, 2, 3, 4, 5],
+	    y: [1, 2, 4, 8, 16],
+    }]
+    const layout = {
+        xaxis : { title : 'コスト(円) × 1,000,000'},
+        yaxis : { title : '$リーチ × 1,000,000'},
+	    margin: { t: 0 },
+	}
+	Plotly.newPlot(
+	    "test",
+        data,
+        layout
+        );
+
+	let waterfall_data = [{
+	    name: "sample2",
+        type: "waterfall",
+        orientation: "v",
+        measure: [
+            "relative",
+            "relative",
+            "relative",
+            "total",
+        ],
+        x: [
+            "Twitter",
+            "Youtube",
+            "Facebook",
+            "TotalBudget",
+        ],
+        textposition: "outside",
+        text: [
+            "50",
+            "30",
+            "20",
+            "Total"
+        ],
+        y: [
+            50,
+            30,
+            20,
+            0
+        ],
+    }];
+
+	let waterfall_layout = {
+        margin: { t: 0 },
+        xaxis: {
+            title: "媒体名",
+	        type: "category"
+        },
+        yaxis: {
+            title: "予算(円) × 1,000,000",
+	        type: "linear"
+        },
+        autosize: true,
+        showlegend: false
+    };
+
+	Plotly.newPlot(
+	    "waterfall",
+        waterfall_data,
+        waterfall_layout
+    )
+
+    $("#btn-simulation").click(function (event) {
+        event.preventDefault();
+        let form = $("#form-simulation")
+        let params = form.serializeJSON();
+        console.log(params);
+
+        $.post({
+            data: JSON.stringify(params),
+            url: form.attr("action"),
+            contentType: 'application/json',
+        }).done(function (data){
+            Plotly.newPlot(
+                "test",
+                JSON.parse(data.graph)[0].data,
+                JSON.parse(data.graph)[0].layout
+            );
+            let strObj = document.getElementById("sample")
+            strObj.innerHTML =
+                "<p class=h2>" + "広告予算" + params.budget + "円を消化すると" +
+                Math.round(data.reach) + "人にリーチできると推測されます" + "</p>"
+        })
+    })
+
+    $("#media-checkbox").on("change", function (_event){
+        const limit = 1
+        const button = $('#btn-optimization');
+        let checked = $("input[type=checkbox]:checked")
+        if (checked.length > limit){
+            button.attr("disabled", false)
+        } else {
+            button.attr("disabled", true)
+        }
+    })
+
+    $("#btn-optimization").click(function (event) {
+        event.preventDefault();
+        let form = $("#form-optimization");
+        let params = form.serializeJSON();
+        $.post({
+            data: JSON.stringify(params),
+            url: form.attr("action"),
+            contentType: 'application/json',
+        }).done(function (data){
+            Plotly.newPlot(
+                "waterfall",
+                JSON.parse(data.graph)[0].data,
+                JSON.parse(data.graph)[0].layout
+            );
+        }).fail(function (jqXHR){
+            let error = JSON.parse(jqXHR.responseText)
+            $("#error-message").html(error.detail)
+        })
+    })
+
+
+
+
+</script>
+
+</body>
+</html>
