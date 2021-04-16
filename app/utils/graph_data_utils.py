@@ -55,7 +55,7 @@ class GraphDataUtils:
                 layout=dict(
                     margin=dict(t=0),
                     xaxis=dict(title="媒体名", type="category"),
-                    yaxis=dict(title="予算(円)", type="linear"),
+                    yaxis=dict(title="予算(円) × 1,000,000", type="linear"),
                     autosize=True,
                     showlegend=False
                 )
