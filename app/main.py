@@ -6,13 +6,14 @@ import uvicorn
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.logger import logger
 from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 from models.fastapi_models import SimulationSubmitBody, OptimizationSubmitBody
 from lib.reach_simulator import ReachSimulator
 from lib.budget_optimizer import BudgetOptimizer
 from utils.graph_data_utils import GraphDataUtils
 
 APP = FastAPI()
-
+APP.mount("/static", StaticFiles(directory="static"), name="static")
 TEMPLATES = Jinja2Templates(directory='templates')
 
 
